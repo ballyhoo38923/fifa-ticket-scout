@@ -97,6 +97,25 @@
       </div>
     </div>
 
+    <!-- Section Calculator -->
+    <div class="section">
+      <div class="section-header collapsible" id="sectionCalcToggle">
+        <h2>Section Calculator</h2>
+        <svg class="chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 6l4 4 4-4"/>
+        </svg>
+      </div>
+      <div class="collapsible-body" id="sectionCalcBody" style="display:none;">
+        <p class="section-calc-hint">Enter block/section IDs (comma or space separated) to get the seat count per category and the weighted average price across just those sections.</p>
+        <div class="section-calc-input-row">
+          <input type="text" id="sectionCalcInput" class="section-calc-input"
+                 placeholder="e.g. 134, 135, 228" spellcheck="false" autocomplete="off">
+          <button class="btn btn-primary" id="sectionCalcBtn">Calculate</button>
+        </div>
+        <div id="sectionCalcResult"></div>
+      </div>
+    </div>
+
     <!-- Scan -->
     <div class="scan-section" id="scanSection">
       <button id="scanBtn" class="btn btn-scan">

@@ -220,11 +220,18 @@ function renderDashboard(game) {
   const seats = Object.values(game.seats || {}).filter(s => s.exclusive !== false && s.price != null);
   const match = game.match;
 
+  currentSeats = seats;
+
   renderMatchInfo(match);
   renderStatsBar(seats);
   renderCategorySections(seats);
   renderBlockTable(seats);
+  renderSectionCalc();
 }
+
+// Seats for the currently-displayed game (already filtered to
+// exclusive + priced). Used by the Section Calculator.
+let currentSeats = [];
 
 // --- Match Info ---
 
@@ -880,6 +887,145 @@ function renderBlockTable(seats) {
     .join("");
 }
 
+
+// --- Section Calculator ---
+
+// Given the captured seats and a list of block/section tokens (block names
+// as shown in the UI, or numeric block IDs), return the seat count + average
+// price per category and the overall weighted-average price across the whole
+// set. Prices stay in the raw captured units; the caller converts to USD for
+// display (every seat in a game shares the same fee multiplier, so the
+// weighted average converts cleanly). A "token" is matched if it equals either
+// a seat's block name or its block ID.
+function computeSectionBreakdown(seats, tokens) {
+  const wanted = new Set(
+    tokens.map((t) => String(t).trim().toLowerCase()).filter(Boolean)
+  );
+
+  const matched = seats.filter((s) => {
+    if (s.price == null) return false;
+    const byName = String(s.block ?? "").trim().toLowerCase();
+    const byId = s.blockId != null ? String(s.blockId).trim().toLowerCase() : "";
+    return wanted.has(byName) || (byId && wanted.has(byId));
+  });
+
+  const cats = new Map(); // category -> { count, sum }
+  let totalCount = 0;
+  let totalSum = 0;
+  const matchedBlocks = new Set();
+  for (const s of matched) {
+    const cat = s.category || "Unknown";
+    if (!cats.has(cat)) cats.set(cat, { count: 0, sum: 0 });
+    const c = cats.get(cat);
+    c.count++;
+    c.sum += s.price;
+    totalCount++;
+    totalSum += s.price;
+    matchedBlocks.add(String(s.block ?? ""));
+  }
+
+  const perCategory = [...cats.entries()]
+    .map(([category, c]) => ({ category, count: c.count, avgRaw: c.sum / c.count }))
+    .sort((a, b) => b.count - a.count);
+
+  // Report tokens that matched no seat so the user can spot typos.
+  const matchedTokens = new Set();
+  for (const s of matched) {
+    matchedTokens.add(String(s.block ?? "").trim().toLowerCase());
+    if (s.blockId != null) matchedTokens.add(String(s.blockId).trim().toLowerCase());
+  }
+  const unmatchedTokens = [...wanted].filter((t) => !matchedTokens.has(t));
+
+  return {
+    perCategory,
+    totalCount,
+    weightedAvgRaw: totalCount ? totalSum / totalCount : null,
+    matchedBlocks: [...matchedBlocks],
+    unmatchedTokens,
+  };
+}
+
+// Wire the collapsible toggle + Calculate button once; the input is read
+// on demand so it always uses the latest captured seats.
+let sectionCalcWired = false;
+function renderSectionCalc() {
+  const toggle = document.getElementById("sectionCalcToggle");
+  const btn = document.getElementById("sectionCalcBtn");
+  const input = document.getElementById("sectionCalcInput");
+  if (!toggle || !btn || !input) return;
+
+  if (!sectionCalcWired) {
+    sectionCalcWired = true;
+
+    toggle.addEventListener("click", () => {
+      const body = document.getElementById("sectionCalcBody");
+      const chevron = toggle.querySelector(".chevron");
+      const isOpen = body.style.display !== "none";
+      body.style.display = isOpen ? "none" : "block";
+      chevron.classList.toggle("open", !isOpen);
+    });
+
+    btn.addEventListener("click", runSectionCalc);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") runSectionCalc();
+    });
+  }
+}
+
+function runSectionCalc() {
+  const input = document.getElementById("sectionCalcInput");
+  const resultEl = document.getElementById("sectionCalcResult");
+  if (!input || !resultEl) return;
+
+  const tokens = input.value.split(/[\s,]+/).filter(Boolean);
+  if (tokens.length === 0) {
+    resultEl.innerHTML = `<div class="section-calc-empty">Enter one or more block/section IDs above.</div>`;
+    return;
+  }
+
+  const r = computeSectionBreakdown(currentSeats, tokens);
+
+  if (r.totalCount === 0) {
+    resultEl.innerHTML = `<div class="section-calc-empty">No captured seats in those sections. Check the IDs against the Block Breakdown table above.</div>`;
+    return;
+  }
+
+  const catRows = r.perCategory
+    .map((c) => `<tr>
+        <td>${escapeHtml(c.category)}</td>
+        <td class="num">${c.count.toLocaleString()}</td>
+        <td class="num price">$${formatPrice(centsToUSD(c.avgRaw))}</td>
+      </tr>`)
+    .join("");
+
+  const unmatchedNote = r.unmatchedTokens.length > 0
+    ? `<div class="section-calc-unmatched">No seats for: ${escapeHtml(r.unmatchedTokens.join(", "))}</div>`
+    : "";
+
+  resultEl.innerHTML = `
+    <div class="section-calc-summary">
+      <div class="section-calc-summary-item">
+        <div class="section-calc-value">${r.totalCount.toLocaleString()}</div>
+        <div class="section-calc-label">Seats</div>
+      </div>
+      <div class="section-calc-summary-item">
+        <div class="section-calc-value">$${formatPrice(centsToUSD(r.weightedAvgRaw))}</div>
+        <div class="section-calc-label">Weighted avg</div>
+      </div>
+      <div class="section-calc-summary-item">
+        <div class="section-calc-value">${r.matchedBlocks.length.toLocaleString()}</div>
+        <div class="section-calc-label">Sections</div>
+      </div>
+    </div>
+    <table class="data-table section-calc-table">
+      <thead>
+        <tr><th>Category</th><th class="num">Seats</th><th class="num">Avg price</th></tr>
+      </thead>
+      <tbody>${catRows}</tbody>
+    </table>
+    ${unmatchedNote}
+  `;
+}
 
 // --- Export CSV ---
 

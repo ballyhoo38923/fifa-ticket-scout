@@ -2546,3 +2546,71 @@ body {
   background: var(--green);
   color: var(--white);
 }
+
+/* --- Section Calculator --- */
+.section-calc-hint {
+  font-size: 12px;
+  color: var(--gray-600);
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+.section-calc-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.section-calc-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--gray-900);
+  background: var(--white);
+}
+.section-calc-input:focus {
+  outline: none;
+  border-color: var(--fifa-purple);
+}
+.section-calc-input-row .btn {
+  white-space: nowrap;
+}
+.section-calc-empty,
+.section-calc-unmatched {
+  font-size: 12px;
+  color: var(--gray-600);
+  padding: 6px 0;
+}
+.section-calc-unmatched {
+  color: var(--accent);
+  margin-top: 6px;
+}
+.section-calc-summary {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.section-calc-summary-item {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  background: var(--gray-50);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.section-calc-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fifa-purple);
+}
+.section-calc-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gray-600);
+  margin-top: 2px;
+}
+.section-calc-table {
+  width: 100%;
+}
